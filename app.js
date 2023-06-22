@@ -2,13 +2,14 @@ const {ChangeSet, Text} = require("@codemirror/state")
 const express = require("express");
 const cors = require("cors");
 const fs = require('fs');
-const socket = require("socket.io");
+const socket = require("socket.io")
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require('dotenv').config()
 const dbConnect = require("./db/dbConnect");
 const User = require("./db/userModel");
 const auth = require("./auth");
+const path = require("path");
 
 dbConnect();
 
@@ -26,8 +27,9 @@ app.post("/register", (request, response) => {
         .hash(request.body.password, 10)
         .then((hashedPassword) => {
             const user = new User({
-                email: request.body.email,
+                username: request.body.username,
                 password: hashedPassword,
+                groupName: request.body.groupName
             });
 
             user
@@ -55,8 +57,8 @@ app.post("/register", (request, response) => {
 
 // login endpoint
 app.post("/login", (request, response) => {
-    // check if email exists
-    User.findOne({ email: request.body.email })
+    // check if username exists
+    User.findOne({ username: request.body.username })
         .then((user) => {
             bcrypt
                 .compare(request.body.password, user.password)
@@ -73,15 +75,16 @@ app.post("/login", (request, response) => {
                     const token = jwt.sign(
                         {
                             userId: user._id,
-                            userEmail: user.email,
+                            username: user.username,
+                            groupName: user.groupName
                         },
                         process.env.JWT_SECRET,
-                        { expiresIn: "24h" }
+                        { expiresIn: "48h" }
                     );
 
                     response.status(200).send({
                         message: "Login Successful.",
-                        email: user.email,
+                        username: user.username,
                         token,
                     });
                 })
@@ -99,6 +102,29 @@ app.post("/login", (request, response) => {
             });
         });
 });
+
+app.get("/image", auth, (request, response) => {
+    // console.log(request.user)
+    response.sendFile(path.join(__dirname, 'files', 'oxen.jpg'))
+});
+
+const room1data = fs.readFileSync('./files/oxen.xml', 'utf8');
+const room2data = fs.readFileSync('./files/sample1.xml', 'utf8');
+const room3data = fs.readFileSync('./files/sample2.xml', 'utf8');
+let roomDict = {
+    'one' : {
+        'mirrorDoc': Text.of([room1data]),
+        'updatesLog': []
+    },
+    'two' : {
+        'mirrorDoc': Text.of([room2data]),
+        'updatesLog': []
+    },
+    'three' : {
+        'mirrorDoc': Text.of([room3data]),
+        'updatesLog': []
+    }
+}
 
 
 const data = fs.readFileSync('./files/oxen.xml', 'utf8');
@@ -119,7 +145,10 @@ socketApp.use(cors);
 const io = socket(server, {
     cors: {
         origin: '*'
-    }
+    },
+    // these options should not be necessary
+    pingTimeout: 60000,
+    maxHttpBufferSize: 1e10
 });
 
 io.use(function(socket, next){
@@ -137,29 +166,28 @@ io.use(function(socket, next){
 })
     .on('connection', function(socket) {
         // Connection now authenticated to receive further events
+        socket.join(socket.decoded.groupName);
+        console.log("Made socket connection " + socket.id + ' ' + socket.decoded.username);
+        socket.emit("firstVersion", roomDict[socket.decoded.groupName].mirrorDoc.toString(), roomDict[socket.decoded.groupName].updatesLog.length)
 
-        console.log("Made socket connection " + socket.id + ' ' + socket.decoded.userEmail);
-        socket.emit("firstVersion", mirrorDoc.toString(), updatesLog.length)
-
-        socket.on("pushUpdates", (version, updates) => {
-            if (version === updatesLog.length) {
+        socket.on("pushUpdates", async (version, updates) => {
+            if (version === roomDict[socket.decoded.groupName].updatesLog.length) {
                 for (let update of updates) {
                     let changes = ChangeSet.fromJSON(update.changes);
                     // console.log(changes)
-                    updatesLog.push({changes, clientID: update.clientID});
+                    roomDict[socket.decoded.groupName].updatesLog.push({changes, clientID: update.clientID});
                     // console.log(updatesLog.length)
-                    mirrorDoc = changes.apply(mirrorDoc)
+                    roomDict[socket.decoded.groupName].mirrorDoc = changes.apply(roomDict[socket.decoded.groupName].mirrorDoc)
                     // console.log(mirrorDoc)
-                    io.emit("newVersion", [{changes, clientID: update.clientID}]);
+                    io.to(socket.decoded.groupName).emit("newVersion", [{changes, clientID: update.clientID}]);
                 }
-            }
-            else {
-                console.log("Version conflict: update log says " + updatesLog.length + " while version is " + version)
+            } else {
+                console.log("Version conflict: update log says " + roomDict[socket.decoded.groupName].updatesLog.length + " while version is " + version)
             }
         });
 
         socket.on('disconnect', () => {
-            console.log('user ' + socket.id + ' ' + socket.decoded.userEmail + ' disconnected');
+            console.log('user ' + socket.id + ' ' + socket.decoded.username + ' disconnected');
         });
     });
 
