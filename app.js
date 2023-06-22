@@ -18,7 +18,7 @@ app.use(cors());
 app.use(express.json());
 
 const server = app.listen(process.env.PORT, () => {
-  console.log(`Express server is running on port 8000.`);
+  console.log(`Express server is running on port ${process.env.PORT}.`);
 });
 
 // register endpoint
