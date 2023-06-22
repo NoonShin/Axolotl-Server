@@ -17,7 +17,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.listen(8000, () => {
+const server = app.listen(process.env.PORT, () => {
   console.log(`Express server is running on port 8000.`);
 });
 
@@ -127,19 +127,17 @@ let roomDict = {
 }
 
 
-const data = fs.readFileSync('./files/oxen.xml', 'utf8');
-let mirrorDoc = Text.of([data]);
-const updatesLog = []
+// const data = fs.readFileSync('./files/oxen.xml', 'utf8');
 // App setup
-const PORT = 5000;
-const socketApp = express();
-const server = socketApp.listen(PORT, function () {
-    console.log(`Socket server is running on port ${PORT}.`);
-});
-
-// Static files
-socketApp.use(express.static("public"));
-socketApp.use(cors);
+// const PORT = 5000;
+// const socketApp = express();
+// const server = socketApp.listen(PORT, function () {
+//     console.log(`Socket server is running on port ${PORT}.`);
+// });
+//
+// // Static files
+// socketApp.use(express.static("public"));
+// socketApp.use(cors);
 
 // Socket setup
 const io = socket(server, {
