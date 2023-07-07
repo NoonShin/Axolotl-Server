@@ -111,17 +111,26 @@ app.get("/image", auth, (request, response) => {
 const room1data = fs.readFileSync('./files/oxen.xml', 'utf8');
 const room2data = fs.readFileSync('./files/sample1.xml', 'utf8');
 const room3data = fs.readFileSync('./files/sample2.xml', 'utf8');
+const basicDoc = fs.readFileSync('./files/sample2.xml', 'utf8');
 let roomDict = {
     'one' : {
         'mirrorDoc': Text.of([room1data]),
         'updatesLog': []
     },
     'two' : {
-        'mirrorDoc': Text.of([room2data]),
+        'mirrorDoc': Text.of([basicDoc]),
         'updatesLog': []
     },
     'three' : {
-        'mirrorDoc': Text.of([room3data]),
+        'mirrorDoc': Text.of([basicDoc]),
+        'updatesLog': []
+    },
+    'four' : {
+        'mirrorDoc': Text.of([basicDoc]),
+        'updatesLog': []
+    },
+    'five' : {
+        'mirrorDoc': Text.of([basicDoc]),
         'updatesLog': []
     }
 }
