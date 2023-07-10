@@ -10,12 +10,17 @@ const dbConnect = require("./db/dbConnect");
 const User = require("./db/userModel");
 const auth = require("./auth");
 const path = require("path");
+const axios = require("axios");
+const bodyParser = require("express");
 
 dbConnect();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json()); // support json encoded bodies
+app.use(express.urlencoded({ extended: true })); // support encoded bodies
+
 
 const server = app.listen(process.env.PORT, () => {
   console.log(`Express server is running on port ${process.env.PORT}.`);
@@ -108,6 +113,25 @@ app.get("/image", auth, (request, response) => {
     response.sendFile(path.join(__dirname, 'files', 'oxen.jpg'))
 });
 
+app.post('/transkribus-proxy', async (req, res) => {
+    try {
+        const params = new URLSearchParams({ user: req.body.user, pw: req.body.pw });
+        const response = await axios.post('https://transkribus.eu/TrpServer/rest/auth/login', params)
+
+        // not sure if this is best practice to send cookie in response body
+        if (response.status === 200) {
+            res.cookie('trCookie', response.headers['set-cookie'][0].split(';')[0])
+            res.status(200).send({
+                data: response.headers['set-cookie'][0].split(';')[0]
+            });
+        }
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send(error);
+    }
+});
+
 const room1data = fs.readFileSync('./files/oxen.xml', 'utf8');
 const room2data = fs.readFileSync('./files/sample1.xml', 'utf8');
 const room3data = fs.readFileSync('./files/sample2.xml', 'utf8');
@@ -191,6 +215,10 @@ io.use(function(socket, next){
             } else {
                 console.log("Version conflict: update log says " + roomDict[socket.decoded.groupName].updatesLog.length + " while version is " + version)
             }
+        });
+
+        socket.on("newSelection", (selection) => {
+            console.log(selection)
         });
 
         socket.on('disconnect', () => {
