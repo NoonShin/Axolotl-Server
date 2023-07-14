@@ -139,38 +139,31 @@ const basicDoc = fs.readFileSync('./files/sample2.xml', 'utf8');
 let roomDict = {
     'one' : {
         'mirrorDoc': Text.of([room1data]),
-        'updatesLog': []
+        'updatesLog': [],
+        'selections': {}
     },
     'two' : {
         'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': []
+        'updatesLog': [],
+        'selections': {}
     },
     'three' : {
         'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': []
+        'updatesLog': [],
+        'selections': {}
     },
     'four' : {
         'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': []
+        'updatesLog': [],
+        'selections': {}
     },
     'five' : {
         'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': []
+        'updatesLog': [],
+        'selections': {}
     }
 }
 
-
-// const data = fs.readFileSync('./files/oxen.xml', 'utf8');
-// App setup
-// const PORT = 5000;
-// const socketApp = express();
-// const server = socketApp.listen(PORT, function () {
-//     console.log(`Socket server is running on port ${PORT}.`);
-// });
-//
-// // Static files
-// socketApp.use(express.static("public"));
-// socketApp.use(cors);
 
 // Socket setup
 const io = socket(server, {
@@ -199,7 +192,8 @@ io.use(function(socket, next){
         // Connection now authenticated to receive further events
         socket.join(socket.decoded.groupName);
         console.log("Made socket connection " + socket.id + ' ' + socket.decoded.username);
-        socket.emit("firstVersion", roomDict[socket.decoded.groupName].mirrorDoc.toString(), roomDict[socket.decoded.groupName].updatesLog.length)
+        socket.emit("firstVersion", roomDict[socket.decoded.groupName].mirrorDoc.toString(), roomDict[socket.decoded.groupName].updatesLog.length);
+        socket.emit("newSelection", roomDict[socket.decoded.groupName].selections);
 
         socket.on("pushUpdates", async (version, updates) => {
             if (version === roomDict[socket.decoded.groupName].updatesLog.length) {
@@ -218,10 +212,22 @@ io.use(function(socket, next){
         });
 
         socket.on("newSelection", (selection) => {
-            console.log(selection)
+            let selectionDict = {
+                selection: selection,
+                username: socket.decoded.username,
+            }
+            let returnDict = {}
+            returnDict[socket.id] = selectionDict;
+
+            roomDict[socket.decoded.groupName].selections[socket.id] = selectionDict;
+            io.to(socket.decoded.groupName).emit("newSelection", returnDict)
         });
 
         socket.on('disconnect', () => {
+            delete roomDict[socket.decoded.groupName].selections[socket.id];
+            let returnDict = {}
+            returnDict[socket.id] = {'delete': true};
+            io.to(socket.decoded.groupName).emit("newSelection", returnDict);
             console.log('user ' + socket.id + ' ' + socket.decoded.username + ' disconnected');
         });
     });
