@@ -109,8 +109,18 @@ app.post("/login", (request, response) => {
 });
 
 app.get("/image", auth, (request, response) => {
-    // console.log(request.user)
-    response.sendFile(path.join(__dirname, 'files', 'oxen.jpg'))
+    const transform = {
+        "one": "oxen.jpg",
+        "two": "oxen.jpg",
+        "three": "oxen.jpg",
+        "four": "oxen.jpg",
+        "five": "oxen.jpg",
+        "six": "oxen.jpg",
+        "seven": "oxen.jpg",
+        "eight": "oxen.jpg",
+    }
+
+    response.sendFile(path.join(__dirname, 'files/', transform[request.user.groupName]))
 });
 
 app.post('/transkribus-proxy', async (req, res) => {
@@ -158,6 +168,21 @@ let roomDict = {
         'selections': {}
     },
     'five' : {
+        'mirrorDoc': Text.of([basicDoc]),
+        'updatesLog': [],
+        'selections': {}
+    },
+    'six' : {
+        'mirrorDoc': Text.of([basicDoc]),
+        'updatesLog': [],
+        'selections': {}
+    },
+    'seven' : {
+        'mirrorDoc': Text.of([basicDoc]),
+        'updatesLog': [],
+        'selections': {}
+    },
+    'eight' : {
         'mirrorDoc': Text.of([basicDoc]),
         'updatesLog': [],
         'selections': {}
