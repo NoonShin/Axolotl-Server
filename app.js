@@ -26,36 +26,51 @@ const server = app.listen(process.env.PORT, () => {
   console.log(`Express server is running on port ${process.env.PORT}.`);
 });
 
-// register endpoint
 app.post("/register", (request, response) => {
-    bcrypt
-        .hash(request.body.password, 10)
-        .then((hashedPassword) => {
-            const user = new User({
-                username: request.body.username,
-                password: hashedPassword,
-                groupName: request.body.groupName
-            });
+    const users = Array.isArray(request.body) ? request.body : [request.body];
+    const results = [];
+    const errors = [];
 
-            user
-                .save()
-                .then((result) => {
-                    response.status(201).send({
-                        message: "User created successfully.",
-                        result,
+    // Process each user individually
+    Promise.all(
+        users.map((user) => {
+            if (!user.username || !user.password || !user.groupName) {
+                errors.push({
+                    username: user.username || 'unknown',
+                    error: "Missing required fields.",
+                });
+                return Promise.resolve();
+            }
+
+            return bcrypt
+                .hash(user.password, 10)
+                .then((hashedPassword) => {
+                    const newUser = new User({
+                        username: user.username,
+                        password: hashedPassword,
+                        groupName: user.groupName,
                     });
+
+                    return newUser.save();
+                })
+                .then((result) => {
+                    results.push({ username: user.username, result });
                 })
                 .catch((error) => {
-                    response.status(500).send({
-                        message: "Error creating user.",
-                        error,
-                    });
+                    errors.push({ username: user.username, error });
                 });
         })
-        .catch((e) => {
+    )
+        .then(() => {
+            response.status(201).send({
+                message: "User registration(s) processed.",
+                results,
+                errors,
+            });
+        })
+        .catch(() => {
             response.status(500).send({
-                message: "Password was not hashed successfully.",
-                e,
+                message: "An unexpected error occurred during registration.",
             });
         });
 });
