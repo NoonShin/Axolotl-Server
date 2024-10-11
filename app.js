@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true })); // support encoded bodies
 
 
 const server = app.listen(process.env.PORT, () => {
-  console.log(`Express server is running on port ${process.env.PORT}.`);
+    console.log(`Express server is running on port ${process.env.PORT}.`);
 });
 
 app.post("/register", (request, response) => {
@@ -158,8 +158,6 @@ app.post('/transkribus-proxy', async (req, res) => {
 });
 
 const room1data = fs.readFileSync('./files/oxen.xml', 'utf8');
-const room2data = fs.readFileSync('./files/sample1.xml', 'utf8');
-const room3data = fs.readFileSync('./files/sample2.xml', 'utf8');
 const basicDoc = fs.readFileSync('./files/sample2.xml', 'utf8');
 let roomDict = {
     'one' : {
@@ -178,26 +176,6 @@ let roomDict = {
         'selections': {}
     },
     'four' : {
-        'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': [],
-        'selections': {}
-    },
-    'five' : {
-        'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': [],
-        'selections': {}
-    },
-    'six' : {
-        'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': [],
-        'selections': {}
-    },
-    'seven' : {
-        'mirrorDoc': Text.of([basicDoc]),
-        'updatesLog': [],
-        'selections': {}
-    },
-    'eight' : {
         'mirrorDoc': Text.of([basicDoc]),
         'updatesLog': [],
         'selections': {}
