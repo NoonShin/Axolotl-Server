@@ -1,26 +1,25 @@
 const jwt = require("jsonwebtoken");
 require('dotenv').config()
 
-module.exports = async (request, response, next) => {
+
+module.exports = (req, res, next) => {
     try {
-        //   get the token from the authorization header
-        const token = request.headers.authorization.split(" ")[1];
+        // Get the Authorization header
+        const authHeader = req.headers.authorization;
 
-        //check if the token matches the supposed origin
-        const decodedToken = await jwt.verify(token, process.env.JWT_SECRET);
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({ error: "Authorization header missing or malformed" });
+        }
 
-        // retrieve the user details of the logged-in user
-        const user = await decodedToken;
+        // Extract token from "Bearer <token>"
+        const token = authHeader.split(" ")[1];
 
-        // pass the user down to the endpoints here
-        request.user = user;
+        // Verify and decode the token
+        // Attach user info to the request
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
 
-        // pass down functionality to the endpoint
         next();
-
     } catch (error) {
-        response.status(401).json({
-            error: new Error("Invalid request!"),
-        });
+        return res.status(401).json({ error: "Invalid or expired token" });
     }
 };

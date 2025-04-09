@@ -138,7 +138,7 @@ app.get("/image", auth, (request, response) => {
     response.sendFile(path.join(__dirname, 'files/', transform[request.user.groupName]))
 });
 
-app.post('/transkribus-proxy', async (req, res) => {
+app.post('/transkribus-proxy', auth, async (req, res) => {
     try {
         const params = new URLSearchParams({ user: req.body.user, pw: req.body.pw });
         const response = await axios.post('https://transkribus.eu/TrpServer/rest/auth/login', params)
@@ -154,6 +154,97 @@ app.post('/transkribus-proxy', async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(500).send(error);
+    }
+});
+
+app.get('/transkribus-collections', auth, async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split("Bearer ")[1];
+
+        if (!token) {
+            return res.status(401).json({ error: "Missing authentication token" });
+        }
+        console.log(token)
+
+        const transkribusResponse = await axios.get("https://transkribus.eu/TrpServer/rest/collections/list", {
+            headers: {
+                Cookie: token
+            }
+        });
+
+        // Format response: only return useful fields
+        const formattedCollections = transkribusResponse.data.map(collection => ({
+            id: collection.colId,
+            name: collection.colName,
+            description: collection.description || "No description available",
+            documents: collection.nrOfDocuments,
+            role: collection.role,
+            thumbnail: collection.thumbUrl || null,
+        }));
+
+        res.json(formattedCollections);
+    } catch (error) {
+        console.error("Error fetching collections:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({ error: "Failed to fetch collections" });
+    }
+});
+
+app.get('/transkribus-collections/:collectionId', auth, async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split("Bearer ")[1];
+        const { collectionId } = req.params;
+
+        if (!token) {
+            return res.status(401).json({ error: "Missing authentication token" });
+        }
+
+        const transkribusResponse = await axios.get(`https://transkribus.eu/TrpServer/rest/collections/${collectionId}/list`, {
+            headers: { Cookie: token }
+        });
+
+        // Format the response to return useful fields
+        const formattedDocs = transkribusResponse.data.map(doc => ({
+            id: doc.docId,
+            title: doc.title,
+            uploader: doc.uploader,
+            pages: doc.nrOfPages,
+            thumbUrl: doc.thumbUrl,
+            url: doc.url
+        }));
+
+        res.json(formattedDocs);
+    } catch (error) {
+        console.error("Error fetching collection details:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({ error: "Failed to fetch collection details" });
+    }
+});
+
+app.get('/transkribus-collections/:collectionId/:docId', auth, async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split("Bearer ")[1];
+        const { collectionId, docId } = req.params;
+
+        if (!token) {
+            return res.status(401).json({ error: "Missing authentication token" });
+        }
+
+        const transkribusResponse = await axios.get(`https://transkribus.eu/TrpServer/rest/collections/${collectionId}/${docId}/fulldoc`, {
+            headers: { Cookie: token }
+        });
+
+        // Format the response to return useful fields
+        const formattedPages = transkribusResponse.data.pageList.pages.map(page => ({
+            id: page.pageId,
+            number: page.pageNr,
+            imgFileName: page.imgFileName,
+            thumbUrl: page.thumbUrl,
+            url: page.url
+        }));
+
+        res.json(formattedPages);
+    } catch (error) {
+        console.error("Error fetching document details:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({ error: "Failed to fetch document details" });
     }
 });
 
